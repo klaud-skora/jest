@@ -1,35 +1,48 @@
-const todos = [
-  {
-    id: 1,
-    name: 'Dinner', 
-    done: 'false'
-  },
-  {
-    id: 3,
-    name: 'shopping', 
-    done: 'false'
-  }
-];
+let id = 0;
+
+function getId() {
+  const currentId = id;
+  id += 1;
+  return currentId;
+}
+
+function createTodo(name) {
+  const id = getId();
+  return { id, name, done: false };
+}
+
+function respondWithError(res, error) {
+  res.status(400);
+  res.json({ error });
+}
+
+const todos = [createTodo('Dinner'), createTodo('shopping')];
+
+exports.getTodos = () => todos;
 
 exports.getList = (req, res) => {
   res.json(todos);
 };
-exports.create = (req, res, next) => {
+
+exports.create = (req, res) => {
 
   if (!req.body || !req.body.hasOwnProperty('name')) {
-    return next(new Error('Name is missing!'));
+    return respondWithError(res, 'Name is missing!');
   }
 
-  if(typeof req.body.name !== 'string') {
-    return next(new Error('Name should be a string'));
+  const { name } = req.body;
+
+  if(typeof name !== 'string') {
+    return respondWithError(res, 'Name should be a string');
   }
 
-  if(req.body.name.trim() === '') {
-    return next(new Error('Name should not be empty!'));
+  if(name.trim() === '') {
+    return respondWithError(res, 'Name should not be empty!');
   } else {
-    const { name } = req.body;
     
-    res.json(name);
+    const newTodo = createTodo(name);
+    todos.push(newTodo);
+    res.json(newTodo);
   }
 
 };

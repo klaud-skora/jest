@@ -132,7 +132,6 @@ describe('change', () => {
   const mockId = 44;
   const nextName = "Tea";
 
-
   it('works', async () => {
     const response = await request(app).put('/1');
 
@@ -140,7 +139,6 @@ describe('change', () => {
   });
 
   it('returns changed task', () => {
-    
     todo.addTodo(todo.createTodo(mockName, mockId));
     const { length } = todo.getTodos();
     req.body = { name: nextName };
@@ -158,18 +156,15 @@ describe('change', () => {
     expect(changedTodo).toMatchObject({
       name: nextName,
     });
-
   });
 
   it('throws an error because of no `name` property in the body', () => {
-
     req.params.id = mockId;
     req.body = {};
     todo.change(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name is missing!' });
-
   });
 
   it('no body', () => {
@@ -178,7 +173,6 @@ describe('change', () => {
 
     expectStatus(400);
     expectResponse({ error: 'Name is missing!' });
-
   });
 
   it('handles an empty name', () => {
@@ -210,8 +204,6 @@ describe('change', () => {
 
     expectStatus(400);
     expectResponse({ error: 'Name should not be empty!' });
-
-
   });
 
   it('handles wrong name type', () => {
@@ -220,87 +212,40 @@ describe('change', () => {
 
     expectStatus(400);
     expectResponse({ error: 'Name should be a string' });
-
   });
 
 });
 
-describe.skip('delete', () => {
+describe('delete', () => {
+  const mockName = 'Coffee';
+  const mockId = 44;
+  const unicId = 'whatever';
 
-  it('works', async () => {
-    const response = await request(app).post('/add');
+  it('works', () => {
+    todo.addTodo(todo.createTodo(mockName, mockId));
 
-    expect(response.status).toEqual(400);
+    const { length } = todo.getTodos();
+    const todoDeleted = todo.getTodos().find((todo) => todo.id === mockId);
+    req.params.id = mockId;
+
+    todo.delete(req, res );
+    
+    const todos = todo.getTodos();
+
+    expectResponse(todoDeleted);
+    expectStatus(200);
+    expect(todos).toHaveLength(length - 1);
+    expect(todoDeleted).toMatchObject({ id: mockId});
   });
 
-  it('returns added task', () => {
+  it('handles missing todo', () => {
+    req.params.id = unicId;
 
-    const mockName = 'Coffee';
-    const todos = todo.getTodos();
-    const { length } = todo.getTodos();
-
-    req.body = { name: mockName };
     todo.delete(req, res );
 
-    expectStatus(200);
-    expect(res.json).toHaveBeenCalledTimes(1);
-    expectResponse(todos[todos.length - 1]);
-
-    expect(todos).toHaveLength(length + 1);
-    expect(todos[todos.length - 1].name).toEqual(mockName);
-    expect(new Set(todos.map((todo) => todo.id)).size).toEqual(todos.length);
-    expect(todos[todos.length - 1]).toMatchObject({
-      name: mockName,
-      done: false,
-    });
-
+    expectStatus(404);
+    expectTextResponse('Not found');
   });
-
-  it('throws an error because of no `name` property in the body', () => {
-    req.body = {};
-    todo.delete(req, res);
-
-    expectStatus(400);
-    expectResponse({ error: 'Name is missing!' });
-
-  });
-
-  it('no body', () => {
-    todo.delete(req, res);
-
-    expectStatus(400);
-    expectResponse({ error: 'Name is missing!' });
-
-  });
-
-  it('handles an empty name', () => {
-    req.body = { name: '' };
-    todo.delete(req, res);
-
-    expectStatus(400);
-    expectResponse({ error: 'Name should not be empty!' });
-
-  });
-
-  it('handles an empty name (after triming)', () => {
-    req.body = { name: '   ' };
-    todo.delete(req, res);
-
-    expectStatus(400);
-    expectResponse({ error: 'Name should not be empty!' });
-
-
-  });
-
-  it('handles wrong name type', () => {
-    req.body = { name: 43 };
-    todo.delete(req,res);
-
-    expectStatus(400);
-    expectResponse({ error: 'Name should be a string' });
-
-  });
-
 });
 
 describe('toggle', () => {

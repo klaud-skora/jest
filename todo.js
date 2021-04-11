@@ -69,7 +69,13 @@ exports.change = (req, res) => {
   res.json(todo);
 };
 exports.delete = (req, res) => {
-  res.json('Delete item from todo list');
+  const todo = findTodo(req.params.id);
+
+  if (!todo) return respondNotFound(res);
+
+  todos.splice(todos.indexOf(todo), 1); 
+
+  res.json(todo);
 };
 exports.toggle = (req, res) => {
   res.send('Manage todo item');

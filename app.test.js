@@ -12,7 +12,7 @@ it('works', async () => {
 it('handles pages with 404 errors - not found', async () => {
   const response = await request(app).get('/whatever');
 
-  expect(response.text).toEqual('Page is not found');
+  expect(response.text).toEqual('Not found');
   expect(response.status).toEqual(404);
 
 });

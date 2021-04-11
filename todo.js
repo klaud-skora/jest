@@ -1,4 +1,6 @@
+const { respondNotFound, respondWithError } = require('./errorHandlers');
 let id = 0;
+const todos = [createTodo('Dinner'), createTodo('shopping')];
 
 function getId() {
   const currentId = id;
@@ -6,26 +8,19 @@ function getId() {
   return currentId;
 }
 
-function createTodo(name) {
-  const id = getId();
+function createTodo(name, id = getId()) {
   return { id, name, done: false };
 }
 
-function respondWithError(res, error) {
-  res.status(400);
-  res.json({ error });
+function addTodo(todo) {
+  todos.push(todo);
+}
+function findTodo(id) {
+  const todoToChange = todos.find((todo) => todo.id === id);
+  return todoToChange;
 }
 
-const todos = [createTodo('Dinner'), createTodo('shopping')];
-
-exports.getTodos = () => todos;
-
-exports.getList = (req, res) => {
-  res.json(todos);
-};
-
-exports.create = (req, res) => {
-
+function verifyName(req, res) {
   if (!req.body || !req.body.hasOwnProperty('name')) {
     return respondWithError(res, 'Name is missing!');
   }
@@ -38,16 +33,40 @@ exports.create = (req, res) => {
 
   if(name.trim() === '') {
     return respondWithError(res, 'Name should not be empty!');
-  } else {
-    
-    const newTodo = createTodo(name);
-    todos.push(newTodo);
-    res.json(newTodo);
-  }
+  } 
 
+  return { name };
+}
+
+exports.getTodos = () => todos;
+
+exports.addTodo = addTodo;
+exports.createTodo = createTodo;
+
+exports.getList = (req, res) => {
+  res.json(todos);
 };
+
+exports.create = (req, res) => {
+  const name = verifyName(req, res);
+
+  if (!name) return;
+
+  const newTodo = createTodo(name.name);
+  addTodo(newTodo);
+  res.json(newTodo);
+};
+
 exports.change = (req, res) => {
-  res.json('Change item in todo list');
+  const name = verifyName(req, res);
+
+  if (!name) return;
+
+  const todo = findTodo(req.params.id);
+
+  if (!todo) return respondNotFound(res);
+  todo.name = name.name;
+  res.json(todo);
 };
 exports.delete = (req, res) => {
   res.json('Delete item from todo list');

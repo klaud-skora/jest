@@ -1,5 +1,5 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const { respondNotFound } = require('./errorHandlers');
 
 const todo = require('./todo');
 
@@ -21,7 +21,7 @@ app.get('/error', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  res.status(404).send('Page is not found');
+  return respondNotFound(res);
 });
 
 app.use((err, req, res, next) => {

@@ -51,13 +51,7 @@ describe('getList', () => {
 
 describe('create', () => {
 
-  it('works', async () => {
-    const response = await request(app).post('/add');
-
-    expect(response.status).toEqual(400);
-  });
-
-  it('returns added task', () => {
+  it('works and returns added task', () => {
 
     const mockName = 'Coffee';
     const todos = todo.getTodos();
@@ -249,5 +243,48 @@ describe('delete', () => {
 });
 
 describe('toggle', () => {
+  const mockName = 'Coffee';
+  const mockId = 44;
+  const unicId = 'whatever';
 
+  it('works', () => {
+    todo.addTodo(todo.createTodo(mockName, mockId));
+    
+    const { length } = todo.getTodos();
+    req.params.id = mockId;
+    
+    todo.toggle(req, res);
+    
+    const todoToggled = todo.getTodos().find((todo) => todo.id === mockId);
+    const todos = todo.getTodos();
+    expectStatus(200);
+    expect(todoToggled.done).toEqual(true);
+    expect(todos).toHaveLength(length);
+    expectResponse(todoToggled);
+  });
+
+  it('works with changed done value', () => {
+    todo.addTodo(todo.createTodo(mockName, mockId, true));
+    
+    const { length } = todo.getTodos();
+    req.params.id = mockId;
+    
+    todo.toggle(req, res);
+    const todoToggled = todo.getTodos().find((todo) => todo.id === mockId);
+
+    const todos = todo.getTodos();
+    expectStatus(200);
+    expect(todoToggled.done).toEqual(false);
+    expect(todos).toHaveLength(length);
+    expectResponse(todoToggled);
+  });
+
+  it('handles missing todo', () => {
+    req.params.id = unicId;
+
+    todo.toggle(req, res );
+
+    expectStatus(404);
+    expectTextResponse('Not found');
+  });
 });

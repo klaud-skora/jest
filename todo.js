@@ -8,15 +8,24 @@ function getId() {
   return currentId;
 }
 
-function createTodo(name, id = getId()) {
-  return { id, name, done: false };
+function createTodo(name, id = getId(), done = false) {
+  return { id, name, done: done };
 }
 
 function addTodo(todo) {
   todos.push(todo);
 }
+
 function findTodo(id) {
-  const todoToChange = todos.find((todo) => todo.id === id);
+  const numberId = Number(id);
+  const todoToChange = todos.find((todo) => todo.id === numberId);
+  return todoToChange;
+}
+
+function toggleTodo(id) {
+  const numberId = Number(id);
+  const todoToChange = todos.find((todo) => todo.id === numberId);
+  todoToChange.done = !todoToChange.done;
   return todoToChange;
 }
 
@@ -78,5 +87,11 @@ exports.delete = (req, res) => {
   res.json(todo);
 };
 exports.toggle = (req, res) => {
-  res.send('Manage todo item');
+  const todo = findTodo(req.params.id);
+
+  if (!todo) return respondNotFound(res);
+  
+  const toggledTodo = toggleTodo(todo.id);
+  res.json(toggledTodo);
+  
 };

@@ -1,6 +1,8 @@
 const todo = require('./todo');
 const request = require('supertest');
 const { app } = require('./app');
+const { getTodos, createTodo } = require('./db');
+const { connect, disconnect, drop } = require('./client');
 
 let req;
 let res;
@@ -26,6 +28,10 @@ function expectTextResponse(text) {
   expect(res.json).not.toHaveBeenCalled();
 };
 
+beforeAll(connect);
+beforeEach(drop);
+afterAll(disconnect);
+
 beforeEach(() => {
 
   req = {
@@ -40,10 +46,9 @@ beforeEach(() => {
 });
 
 describe('getList', () => {
-  it('works', () => {
-    todo.getList(req,res);
-    const todos = todo.getTodos();
-
+  it('works', async () => {
+    await todo.getList(req,res);
+    const todos = await getTodos();
     expectStatus(200);
     expectResponse(todos);
   });
@@ -51,58 +56,62 @@ describe('getList', () => {
 
 describe('create', () => {
 
-  it('works and returns added task', () => {
+  it('works and returns added task', async () => {
 
     const mockName = 'Coffee';
-    const todos = todo.getTodos();
-    const { length } = todo.getTodos();
+    const { length } = await getTodos();
 
     req.body = { name: mockName };
-    todo.create(req, res );
+    await todo.create(req, res);
 
+    const todos = await getTodos();
+    
     expectStatus(200);
     expect(res.json).toHaveBeenCalledTimes(1);
     expectResponse(todos[todos.length - 1]);
 
     expect(todos).toHaveLength(length + 1);
     expect(todos[todos.length - 1].name).toEqual(mockName);
-    expect(new Set(todos.map((todo) => todo.id)).size).toEqual(todos.length);
     expect(todos[todos.length - 1]).toMatchObject({
       name: mockName,
       done: false,
     });
+    /*
+    * not neccessary with mongo db
+    */
+    // expect(new Set(todos.map((todo) => todo.id)).size).toEqual(todos.length);
 
   });
 
-  it('throws an error because of no `name` property in the body', () => {
+  it('throws an error because of no `name` property in the body', async () => {
     req.body = {};
-    todo.create(req, res);
+    await todo.create(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name is missing!' });
 
   });
 
-  it('no body', () => {
-    todo.create(req, res);
+  it('no body', async () => {
+    await todo.create(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name is missing!' });
 
   });
 
-  it('handles an empty name', () => {
+  it('handles an empty name', async () => {
     req.body = { name: '' };
-    todo.create(req, res);
+    await todo.create(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name should not be empty!' });
 
   });
 
-  it('handles an empty name (after triming)', () => {
+  it('handles an empty name (after triming)', async () => {
     req.body = { name: '   ' };
-    todo.create(req, res);
+    await todo.create(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name should not be empty!' });
@@ -110,9 +119,9 @@ describe('create', () => {
 
   });
 
-  it('handles wrong name type', () => {
+  it('handles wrong name type', async () => {
     req.body = { name: 43 };
-    todo.create(req,res);
+    await todo.create(req,res);
 
     expectStatus(400);
     expectResponse({ error: 'Name should be a string' });
@@ -132,19 +141,20 @@ describe('change', () => {
     expect(response.status).toEqual(400);
   });
 
-  it('returns changed task', () => {
-    todo.addTodo(todo.createTodo(mockName, mockId));
-    const { length } = todo.getTodos();
+  it('returns changed task', async () => {
+    // await todo.addTodo(todo.createTodo(mockName, mockId));
+    const { _id } = await createTodo(mockName);
+    const { length } = await getTodos();
     req.body = { name: nextName };
-    req.params.id = mockId;
+    req.params.id = _id;
 
-    todo.change(req, res );
+    await todo.change(req, res );
 
     expectStatus(200);
-    const todos = todo.getTodos();
-    const changedTodo = todos.find((todo) => todo.id === mockId);
+    const todos = await getTodos();
+    const changedTodo = todos.find((todo) => todo._id.equals(_id));
 
-    expectResponse(todos.find((todo) => todo.id === mockId));
+    expectResponse(changedTodo);
     expect(todos).toHaveLength(length);
 
     expect(changedTodo).toMatchObject({
@@ -152,57 +162,57 @@ describe('change', () => {
     });
   });
 
-  it('throws an error because of no `name` property in the body', () => {
+  it('throws an error because of no `name` property in the body', async () => {
     req.params.id = mockId;
     req.body = {};
-    todo.change(req, res);
+    await todo.change(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name is missing!' });
   });
 
-  it('no body', () => {
+  it('no body', async () => {
     req.params.id = mockId;
-    todo.change(req, res);
+    await todo.change(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name is missing!' });
   });
 
-  it('handles an empty name', () => {
+  it('handles an empty name', async () => {
     req.params.id = mockId;
     req.body = { name: '' };
-    todo.change(req, res);
+    await todo.change(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name should not be empty!' });
   });
 
-  it('handles missing todo', () => {
+  it('handles missing todo', async () => {
     const unicId = 'whatever';
-    todo.addTodo(todo.createTodo(mockName, mockId));
-    const { length } = todo.getTodos();
+    await todo.addTodo(todo.createTodo(mockName, mockId));
+    const { length } = await getTodos();
     req.body = { name: nextName };
     req.params.id = unicId;
 
-    todo.change(req, res );
+    await todo.change(req, res );
 
     expectStatus(404);
     expectTextResponse('Not found');
   });
 
-  it('handles an empty name (after triming)', () => {
+  it('handles an empty name (after triming)', async () => {
     req.params.id = mockId;
-    req.body = { name: '   ' };
-    todo.change(req, res);
+    req.body = { name: ' ' };
+    await todo.change(req, res);
 
     expectStatus(400);
     expectResponse({ error: 'Name should not be empty!' });
   });
 
-  it('handles wrong name type', () => {
+  it('handles wrong name type', async () => {
     req.body = { name: 43 };
-    todo.change(req,res);
+    await todo.change(req,res);
 
     expectStatus(400);
     expectResponse({ error: 'Name should be a string' });
@@ -215,27 +225,28 @@ describe('delete', () => {
   const mockId = 44;
   const unicId = 'whatever';
 
-  it('works', () => {
-    todo.addTodo(todo.createTodo(mockName, mockId));
+  it('works', async () => {
+    // await todo.addTodo(todo.createTodo(mockName, mockId));
+    const newTodo = await createTodo(mockName);
+    const { _id } = newTodo;
+    const { length } = await getTodos();
+    // const todoDeleted = (await getTodos()).find((todo) => todo._id.equals(_id));
+    req.params.id = _id;
 
-    const { length } = todo.getTodos();
-    const todoDeleted = todo.getTodos().find((todo) => todo.id === mockId);
-    req.params.id = mockId;
-
-    todo.delete(req, res );
+    await todo.delete(req, res);
     
-    const todos = todo.getTodos();
+    const todos = await getTodos();
 
-    expectResponse(todoDeleted);
+    expectResponse(newTodo);
     expectStatus(200);
     expect(todos).toHaveLength(length - 1);
-    expect(todoDeleted).toMatchObject({ id: mockId});
+    expect(newTodo).toMatchObject({ _id: _id });
   });
 
-  it('handles missing todo', () => {
+  it('handles missing todo', async () => {
     req.params.id = unicId;
 
-    todo.delete(req, res );
+    await todo.delete(req, res );
 
     expectStatus(404);
     expectTextResponse('Not found');
@@ -247,44 +258,64 @@ describe('toggle', () => {
   const mockId = 44;
   const unicId = 'whatever';
 
-  it('works', () => {
-    todo.addTodo(todo.createTodo(mockName, mockId));
+  it('works', async () => {
+    const newTodo = await createTodo(mockName);
+    const { length } = await getTodos();
+    req.params.id = newTodo._id;
+    req.body = { ...newTodo };
     
-    const { length } = todo.getTodos();
-    req.params.id = mockId;
+    await todo.toggle(req, res);
     
-    todo.toggle(req, res);
-    
-    const todoToggled = todo.getTodos().find((todo) => todo.id === mockId);
-    const todos = todo.getTodos();
+    // const todoToggled = (await getTodos()).find((todo) => todo.id === mockId);
+    const todos = await getTodos();
+    const toggledTodo = todos.find((todo) => todo._id.equals(newTodo._id));
     expectStatus(200);
-    expect(todoToggled.done).toEqual(true);
+    expect(toggledTodo.done).toEqual(true);
     expect(todos).toHaveLength(length);
-    expectResponse(todoToggled);
+    expectResponse(toggledTodo);
   });
 
-  it('works with changed done value', () => {
-    todo.addTodo(todo.createTodo(mockName, mockId, true));
+  it('works with changed done value', async () => {
+    const newTodo = await createTodo(mockName, true);
     
-    const { length } = todo.getTodos();
-    req.params.id = mockId;
-    
-    todo.toggle(req, res);
-    const todoToggled = todo.getTodos().find((todo) => todo.id === mockId);
+    const { length } = await getTodos();
+    req.params.id = newTodo._id;
+    req.body = { ...newTodo };
+    await todo.toggle(req, res);
 
-    const todos = todo.getTodos();
+    const todos = await getTodos();
+    const toggledTodo = todos.find((todo) => todo._id.equals(newTodo._id));
     expectStatus(200);
-    expect(todoToggled.done).toEqual(false);
+    expect(toggledTodo.done).toEqual(false);
     expect(todos).toHaveLength(length);
-    expectResponse(todoToggled);
+    expectResponse(toggledTodo);
   });
 
-  it('handles missing todo', () => {
+  it('handles missing todo', async () => {
     req.params.id = unicId;
+    req.body = { done: false }
 
-    todo.toggle(req, res );
+    await todo.toggle(req, res );
 
     expectStatus(404);
     expectTextResponse('Not found');
   });
+
+
+  it('no body', async () => {
+    req.params.id = mockId;
+    await todo.toggle(req, res);
+
+    expectStatus(400);
+    expectResponse({ error: 'Done is missing!' });
+  });
+
+  it('handles wrong done type', async () => {
+    req.body = { done: 43 };
+    await todo.toggle(req,res);
+
+    expectStatus(400);
+    expectResponse({ error: 'Done should be a boolean' });
+  });
+
 });

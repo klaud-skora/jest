@@ -1,6 +1,7 @@
 const { respondNotFound, respondWithError } = require('./errorHandlers');
+const { getTodos, createTodo, findAndUpdateTodo, findAndDeleteTodo } = require('./db');
 let id = 0;
-const todos = [createTodo('Dinner'), createTodo('shopping')];
+const todos = [deprecatedCreateTodo('Dinner'), deprecatedCreateTodo('shopping')];
 
 function getId() {
   const currentId = id;
@@ -8,26 +9,14 @@ function getId() {
   return currentId;
 }
 
-function createTodo(name, id = getId(), done = false) {
+function deprecatedCreateTodo(name, id = getId(), done = false) {
   return { id, name, done: done };
 }
 
-function addTodo(todo) {
+function deprecatedAddTodo(todo) {
   todos.push(todo);
 }
 
-function findTodo(id) {
-  const numberId = Number(id);
-  const todoToChange = todos.find((todo) => todo.id === numberId);
-  return todoToChange;
-}
-
-function toggleTodo(id) {
-  const numberId = Number(id);
-  const todoToChange = todos.find((todo) => todo.id === numberId);
-  todoToChange.done = !todoToChange.done;
-  return todoToChange;
-}
 
 function verifyName(req, res) {
   if (!req.body || !req.body.hasOwnProperty('name')) {
@@ -46,52 +35,65 @@ function verifyName(req, res) {
 
   return { name };
 }
+function verifyDone(req, res) {
+  if (!req.body || !req.body.hasOwnProperty('done')) {
+    return respondWithError(res, 'Done is missing!');
+  }
+
+  const { done } = req.body;
+
+  if(typeof done !== 'boolean') {
+    return respondWithError(res, 'Done should be a boolean');
+  }
+  return { done };
+}
 
 exports.getTodos = () => todos;
 
-exports.addTodo = addTodo;
-exports.createTodo = createTodo;
+exports.addTodo = deprecatedAddTodo;
+exports.createTodo = deprecatedCreateTodo;
 
-exports.getList = (req, res) => {
+exports.getList = async (req, res) => {
+  const todos = await getTodos();
   res.json(todos);
 };
 
-exports.create = (req, res) => {
+exports.create = async (req, res) => {
   const name = verifyName(req, res);
 
   if (!name) return;
 
-  const newTodo = createTodo(name.name);
-  addTodo(newTodo);
+  const newTodo = await createTodo(name.name);
+  // addTodo(newTodo);
   res.json(newTodo);
 };
 
-exports.change = (req, res) => {
+exports.change = async (req, res) => {
   const name = verifyName(req, res);
 
   if (!name) return;
 
-  const todo = findTodo(req.params.id);
-
+  // const todo = findTodo(req.params.id);
+  const todo = await findAndUpdateTodo(req.params.id, { $set: { name: name.name } }); 
   if (!todo) return respondNotFound(res);
-  todo.name = name.name;
+  // todo.name = name.name;
   res.json(todo);
 };
-exports.delete = (req, res) => {
-  const todo = findTodo(req.params.id);
+exports.delete = async (req, res) => {
+  const todo = await findAndDeleteTodo(req.params.id);
 
   if (!todo) return respondNotFound(res);
-
-  todos.splice(todos.indexOf(todo), 1); 
+  // todos.splice(todos.indexOf(todo), 1); 
 
   res.json(todo);
 };
-exports.toggle = (req, res) => {
-  const todo = findTodo(req.params.id);
-
+exports.toggle = async (req, res) => {
+  const cleanDone = verifyDone(req, res);  
+  if (!cleanDone) return;
+  // const todo = findTodo(req.params.id);
+  const todo = await findAndUpdateTodo(req.params.id, { $set: { done: !cleanDone.done } }); 
   if (!todo) return respondNotFound(res);
-  
-  const toggledTodo = toggleTodo(todo.id);
-  res.json(toggledTodo);
+  // todo.name = name.name;
+  res.json(todo);
   
 };

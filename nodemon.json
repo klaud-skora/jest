@@ -1,5 +1,6 @@
 {
   "env": {
+    "DBNAME": "todos",
     "PORT": 80
   }
 }

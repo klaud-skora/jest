@@ -1,22 +1,5 @@
 const { respondNotFound, respondWithError } = require('./errorHandlers');
 const { getTodos, createTodo, findAndUpdateTodo, findAndDeleteTodo } = require('./db');
-let id = 0;
-const todos = [deprecatedCreateTodo('Dinner'), deprecatedCreateTodo('shopping')];
-
-function getId() {
-  const currentId = id;
-  id += 1;
-  return currentId;
-}
-
-function deprecatedCreateTodo(name, id = getId(), done = false) {
-  return { id, name, done: done };
-}
-
-function deprecatedAddTodo(todo) {
-  todos.push(todo);
-}
-
 
 function verifyName(req, res) {
   if (!req.body || !req.body.hasOwnProperty('name')) {
@@ -49,9 +32,6 @@ function verifyDone(req, res) {
 }
 
 exports.getTodos = () => todos;
-
-exports.addTodo = deprecatedAddTodo;
-exports.createTodo = deprecatedCreateTodo;
 
 exports.getList = async (req, res) => {
   const todos = await getTodos();

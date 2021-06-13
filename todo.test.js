@@ -1,3 +1,4 @@
+const { ObjectId } = require('mongodb');
 const todo = require('./todo');
 const request = require('supertest');
 const { app } = require('./app');
@@ -188,10 +189,21 @@ describe('change', () => {
     expectResponse({ error: 'Name should not be empty!' });
   });
 
+  it('handles ObjectId id', async () => {
+    const unicId = ObjectId('whatever1234');
+    await createTodo(mockName);
+    req.body = { name: nextName };
+    req.params.id = unicId;
+
+    await todo.change(req, res );
+
+    expectStatus(404);
+    expectTextResponse('Not found');
+  });
+
   it('handles missing todo', async () => {
     const unicId = 'whatever';
-    await todo.addTodo(todo.createTodo(mockName, mockId));
-    const { length } = await getTodos();
+    await createTodo(mockName);
     req.body = { name: nextName };
     req.params.id = unicId;
 

@@ -1,6 +1,12 @@
+const { ObjectId } = require('mongodb');
 const { getDb } = require('./client');
 
 const collectionName = 'todos';
+
+function getId(id) {
+
+  return ObjectId.isValid(id) ? ObjectId(id) : null;
+}
 
 function getCollection() {
   const db = getDb();
@@ -23,13 +29,13 @@ exports.createTodo = async (name, done = false ) => {
 exports.findAndUpdateTodo = async (id, modify) => {
   const collection = getCollection();
   const result = await collection.findOneAndUpdate(
-    { _id: id }, modify, { returnOriginal: false }
+    { _id: getId(id) }, modify, { returnOriginal: false }
   );
   return result.value;
 };
 
 exports.findAndDeleteTodo = async (id) => {
   const collection = getCollection();
-  const result = await collection.findOneAndDelete({ _id: id });
+  const result = await collection.findOneAndDelete({ _id: getId(id) });
   return result.value;
 };
